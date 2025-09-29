@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EKS Monitoring Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        label {
+            font-weight: bold;
+        }
+        select {
+            padding: 6px;
+            margin: 10px 0 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        th {
+            background-color: #e2e3e5;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #loading {
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: none;
+        }
+        strong {
+            color: #b30000;
+        }
+        em {
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>EKS Pod Status</h1>
+
+    <label for="namespace-select">Select Namespace:</label>
+    <select id="namespace-select" onchange="refreshDashboard()">
+        <option value="">Loading namespaces...</option>
+    </select>
+
+    <div id="loading">⏳ Loading dashboard...</div>
+    <div id="pod-status">Loading...</div>
+    <hr>
+    <div id="ai-diagnostics">
+        <h2>AI Error Diagnostics</h2>
+        <p>Loading...</p>
+    </div>
+
+    <script>
+        function loadNamespaces() {
+            fetch('/eks_dashboard/namespaces')
+                .then(res => res.json())
+                .then(data => {
+                    const select = document.getElementById('namespace-select');
+                    select.innerHTML = '';
+                    data.forEach(ns => {
+                        const opt = document.createElement('option');
+                        opt.value = ns;
+                        opt.textContent = ns;
+                        select.appendChild(opt);
+                    });
+                    select.value = data.includes("default") ? "default" : data[0];
+                    refreshDashboard();
+                });
+        }
+
+        function refreshDashboard() {
+            const ns = document.getElementById('namespace-select').value;
+            document.getElementById('loading').style.display = 'block';
+
+            fetch(`/eks_dashboard/data?namespace=${ns}`)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    document.getElementById('pod-status').innerHTML = doc.querySelector('#pod-status').innerHTML;
+                    document.getElementById('ai-diagnostics').innerHTML = doc.querySelector('#ai-diagnostics').innerHTML;
+                    document.getElementById('loading').style.display = 'none';
+                })
+                .catch(error => {
+                    document.getElementById('pod-status').innerHTML = '<p>Error loading pod status.</p>';
+                    document.getElementById('ai-diagnostics').innerHTML = '<p>Error loading diagnostics.</p>';
+                    document.getElementById('loading').style.display = 'none';
+                    console.error('Dashboard fetch error:', error);
+                });
+        }
+
+        loadNamespaces();
+        setInterval(refreshDashboard, 10000);
+    </script>
+</body>
+</html>
