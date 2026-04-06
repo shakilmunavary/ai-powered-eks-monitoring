@@ -1,0 +1,11 @@
+groups:
+- name: http-500-errors
+  rules:
+  - alert: High500Errors
+    expr: sum(rate(http_requests_total{status="500"}[1m])) > 2
+    for: 2m
+    labels:
+      severity: critical
+      service: sample-app
+    annotations:
+      description: "500 errors detected in application metrics"
